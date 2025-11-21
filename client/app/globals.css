@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));  /* <-- this is telling tailwing v4 how to apply the dark theme
+.dark is the css selector patter */
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
