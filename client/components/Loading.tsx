@@ -5,7 +5,7 @@ import Image from "next/image";
 
 const Loading: React.FC = () => {
   return (
-    <div className="h-screen flex items-center justify-center">
+    <div className="h-screen flex items-center justify-center bg-transparent">
       <div className="flex flex-col items-center">
         <Image
           src={loadingImg}

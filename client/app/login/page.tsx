@@ -14,10 +14,11 @@ export default function LoginPage() {
       authClient.getSession().then((session) => {
         setSession(session ?? null);
       });
-      if (session) {
-        redirect("/dashboard");
-      }
     }, []);
+
+    if (session) {
+        redirect("/dashboard");
+    }
       
     const handleLogin = (type: AuthProviders) => {
         if (type === "github") {
