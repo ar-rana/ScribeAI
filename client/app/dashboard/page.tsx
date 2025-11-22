@@ -27,7 +27,10 @@ const page = () => {
   useEffect(() => {
     console.log(state.context.type);
     console.log(state.value);
-  }, [state.context.type, state.value]);
+    if (state.context.audioURL) console.log("audio URL exists");
+    console.log(state.context.audioURL);
+    console.log("context: ", state.context);
+  }, [state.context.type, state.value, state.context.audioURL]);
 
   const handleRecording = (type: Records) => {
     if (type === "start") {
@@ -47,11 +50,11 @@ const page = () => {
     }
   };
 
-  if (!session) {
-    return (
-        <Loading />
-    )
-  }
+  // if (!session) {
+  //   return (
+  //       <Loading />
+  //   )
+  // }
 
   return (
     <div className="min-h-screen dark:bg-slate-800 text-zinc-200 dark:text-white p-4">
@@ -63,6 +66,9 @@ const page = () => {
           <button className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
             Generate Summary
           </button>
+          {(state.context.audioURL && state.matches("finish")) && (
+            <audio className="w-full" controls src={state.context.audioURL}></audio>
+          )}
           <span
             onClick={() => {
               if (currentState === "Start session") handleRecording("start");
@@ -107,7 +113,7 @@ const page = () => {
             <button
               onClick={() => handleRecording("restart")}
               className="fa fa-repeat w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-4 pb-4"
-              title="restart"
+              title="reset"
             />
           </div>
           <div className="w-full bg-gray-300 dark:bg-slate-600 p-4 flex flex-col shadow-md">
