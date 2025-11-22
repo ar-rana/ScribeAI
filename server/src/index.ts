@@ -31,9 +31,11 @@ async function init() {
   const httpServer = http.createServer(app);
   socketService.io.attach(httpServer);
 
-  app.listen(port, () => {
+  httpServer.listen(port, () => {
     console.log(`Server is listening on port ${port}`);
   });
 
   socketService.initListner();
 }
+
+init();

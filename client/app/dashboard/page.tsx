@@ -2,6 +2,7 @@
 import { ThemeSwitch } from "@/components/Buttons/ThemeSwitch";
 import Loading from "@/components/Loading";
 import { recorderState } from "@/context/RecorderState";
+import { socketState } from "@/context/SocketContext";
 import { authClient } from "@/lib/auth-client";
 import { useMachine } from "@xstate/react";
 import { redirect } from "next/navigation";
@@ -15,6 +16,7 @@ const page = () => {
   const [session, setSession] = useState<any>(null);
 
   const [state, send] = useMachine(recorderState);
+  const [socketSt, sendSoc] = useMachine(socketState);
 
   const [currentState, setCurrentState] = useState<CurrState>("Start session");
 
@@ -22,6 +24,7 @@ const page = () => {
     authClient.getSession().then((session) => {
       setSession(session ?? null);
     });
+    sendSoc({ type: "CONNECT" });
   }, []);
 
   useEffect(() => {
@@ -66,6 +69,9 @@ const page = () => {
           </button>
           <button className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
             Generate Summary
+          </button>
+          <button onClick={() => sendSoc({ type: "SEND_CHECK", message: "hhh"})} className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
+            Test Socket
           </button>
           {(state.context.audioURL && state.matches("finish")) && (
             <audio className="w-full" controls src={state.context.audioURL}></audio>
