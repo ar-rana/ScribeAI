@@ -1,16 +1,22 @@
 "use client";
 import { ThemeSwitch } from "@/components/Buttons/ThemeSwitch";
 import Loading from "@/components/Loading";
+import { recorderState } from "@/context/RecorderState";
 import { authClient } from "@/lib/auth-client";
+import { useMachine } from "@xstate/react";
 import { redirect } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type CurrState = "recording..." | "paused" | "Begin recording";
+type CurrState = "recording..." | "paused" | "Start session";
+
+type Records = "start" | "stop" | "restart" | "pause" | "resume";
 
 const page = () => {
   const [session, setSession] = useState<any>(null);
 
-  const [currentState, setCurrentState] = useState<CurrState>("Begin recording");
+  const [state, send] = useMachine(recorderState);
+
+  const [currentState, setCurrentState] = useState<CurrState>("Start session");
 
   useEffect(() => {
     authClient.getSession().then((session) => {
@@ -18,15 +24,38 @@ const page = () => {
     });
   }, []);
 
-  // if (!session) {
-  //   return (
-  //       <Loading />
-  //   )
-  // }
+  useEffect(() => {
+    console.log(state.context.type);
+    console.log(state.value);
+  }, [state.context.type, state.value]);
+
+  const handleRecording = (type: Records) => {
+    if (type === "start") {
+      if (state.matches("paused")) send({ type: "RESUME" });
+      else send({ type: "START" });
+      setCurrentState("recording...");
+    } else if (type === "stop") {
+      send({ type: "STOP" });
+      setCurrentState("Start session");
+    } else if (type === "pause") {
+      send({ type: "PAUSE" });
+      setCurrentState("paused")
+    } else if (type === "restart") {
+      send({ type: "RESTART" });
+    } else if (type === "resume") {
+      send({ type: "RESUME" });
+    }
+  };
+
+  if (!session) {
+    return (
+        <Loading />
+    )
+  }
 
   return (
-    <div className="h-screen dark:bg-slate-800 text-zinc-200 dark:text-white p-4">
-      <div className="flex">
+    <div className="min-h-screen dark:bg-slate-800 text-zinc-200 dark:text-white p-4">
+      <div className="flex flex-col sm:flex-row">
         <div className="flex-1 p-4 space-y-4 flex flex-col">
           <button className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
             Generate Transcript
@@ -34,23 +63,66 @@ const page = () => {
           <button className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
             Generate Summary
           </button>
-          <span className="w-full p-2.5 bg-rose-600 rounded-xl text-center align-middle">{currentState}</span>
+          <span
+            onClick={() => {
+              if (currentState === "Start session") handleRecording("start");
+            }}
+            className="w-full p-2.5 bg-rose-600 rounded-xl text-center align-middle"
+          >
+            {currentState}
+          </span>
+          <label className="inline-flex items-center me-5 cursor-pointer">
+            <span className="select-none ms-3 text-sm font-medium text-heading mr-2 text-gray-800 dark:text-white">
+              Record Mic
+            </span>
+            <input
+              type="checkbox"
+              onChange={() => send({ type: "TOGGLE_RECORDING" })}
+              className="sr-only peer"
+            />
+            <div className="relative w-9 h-5 bg-rose-600 rounded-full peer dark:bg-rose-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600 dark:peer-checked:bg-purple-600"></div>
+            <span className="select-none ms-3 text-sm font-medium text-heading text-gray-800 dark:text-white">
+              Record Tab
+            </span>
+          </label>
           <ThemeSwitch />
         </div>
-        <div className="flex-2 bg-gray-100 dark:bg-slate-700">
+        <div className="flex-2 bg-gray-100 dark:bg-slate-700 shadow-md">
           <div className="w-full grid grid-cols-2 h-full p-4 gap-2">
-            <button className="fa fa-play w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90" title="start"/>
-            <button className="fa fa-pause w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90" title="pause"/>
-            <button className="fa fa-stop w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90" title="stop"/>
-            <button className="fa fa-repeat w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90" title="replay"/>
+            <button
+              onClick={() => handleRecording("start")}
+              className="fa fa-play w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-4 pb-4"
+              title="start session"
+            />
+            <button
+              onClick={() => handleRecording("pause")}
+              className="fa fa-pause w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-4 pb-4"
+              title="pause"
+            />
+            <button
+              onClick={() => handleRecording("stop")}
+              className="fa fa-stop w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-4 pb-4"
+              title="stop"
+            />
+            <button
+              onClick={() => handleRecording("restart")}
+              className="fa fa-repeat w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-4 pb-4"
+              title="restart"
+            />
           </div>
-          <div className="w-full bg-gray-300 dark:bg-slate-600 p-4 flex flex-col">
-            <span className="mb-1.5 w-full font-bold text-lg text-gray-800 dark:text-white">Live Transcript</span>
-            <span className="h-12 w-full text text-gray-800 dark:text-white">sads</span>
+          <div className="w-full bg-gray-300 dark:bg-slate-600 p-4 flex flex-col shadow-md">
+            <span className="mb-1.5 w-full font-bold text-lg text-gray-800 dark:text-white">
+              Live Transcript
+            </span>
+            <span className="h-12 w-full text-sm text-gray-800 dark:text-white">
+              sads
+            </span>
           </div>
         </div>
         <div className="flex-1 p-4 space-y-4">
-          <h1 className="bg-rose-600 p-4 rounded-md text-center">Previous Recordings</h1>
+          <h1 className="bg-rose-600 p-4 rounded-md text-center">
+            Previous Recordings
+          </h1>
           <div className="p-2 bg-gray-300 dark:bg-slate-700 space-y-2 overflow-y-scroll max-h-80">
             {[
               {
@@ -76,19 +148,21 @@ const page = () => {
                 title: "Daily Standup",
                 duration: "03:45",
                 date: "2025-11-21",
-              }
+              },
             ].map((rec) => (
               <div
                 key={rec.id}
                 className="w-full h-12 bg-gray-200 flex items-center justify-between px-3 rounded"
               >
                 <div className="flex flex-col">
-                  <span className="font-medium text-sm text-gray-800">{rec.title}</span>
-                  <span className="text-xs text-gray-800">
-                    {rec.date}
+                  <span className="font-medium text-sm text-gray-800">
+                    {rec.title}
                   </span>
+                  <span className="text-xs text-gray-800">{rec.date}</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-800">{rec.duration}</span>
+                <span className="text-sm font-semibold text-gray-800">
+                  {rec.duration}
+                </span>
               </div>
             ))}
           </div>

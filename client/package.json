@@ -9,11 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@xstate/react": "^6.0.0",
     "better-auth": "^1.3.34",
     "next": "16.0.3",
     "next-themes": "^0.4.6",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "xstate": "^5.24.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
