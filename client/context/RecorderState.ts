@@ -32,7 +32,7 @@ const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
         ? navigator.mediaDevices.getUserMedia({ audio: true })
         : navigator.mediaDevices.getDisplayMedia({
             audio: true,
-            video: false,
+            video: true,
           });
     };
 
@@ -69,6 +69,7 @@ const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
       })
       .catch((error) => {
         console.error("Error setting up recorder:", error);
+        sendBack({ type: "FINISH" });
       });
 
     receive((event) => {

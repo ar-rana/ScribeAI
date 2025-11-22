@@ -34,7 +34,7 @@ const page = () => {
 
   const handleRecording = (type: Records) => {
     if (type === "start") {
-      if (state.matches("paused")) send({ type: "RESUME" });
+      if (currentState === "paused") send({ type: "RESUME" });
       else send({ type: "START" });
       setCurrentState("recording...");
     } else if (type === "stop") {
@@ -45,6 +45,7 @@ const page = () => {
       setCurrentState("paused")
     } else if (type === "restart") {
       send({ type: "RESTART" });
+      setCurrentState("Start session");
     } else if (type === "resume") {
       send({ type: "RESUME" });
     }
