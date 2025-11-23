@@ -35,6 +35,10 @@ class SocketService {
 
       socket.on("audio", async ({ message }) => {
         const audioData = ZAudioData.parse(message);
+        if (audioData.client_id === "NIL") {
+          console.log("CLIENT_ID = NIL");
+          return;
+        };
         console.log("Audio from client: ", audioData.client_id + " " + audioData.user + " " + audioData.audio.slice(0, 21));
 
         socket.emit("audio_received", { message: "received message" });

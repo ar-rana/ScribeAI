@@ -1,5 +1,6 @@
 import { Recording } from "@/app/dashboard/page";
 import { assign, createMachine, fromCallback, sendTo } from "xstate";
+import { v4 as uuidv4 } from 'uuid';
 
 interface RecorderContext {
   recorder: MediaRecorder | null;
@@ -24,11 +25,13 @@ type RecorderEvents =
 
 const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
   ({ sendBack, receive, input }) => {
+    const timer = 6000;
     let recorder: MediaRecorder | null = null;
     let stream: MediaStream | null = null;
-    let blob;
-    let url: any;
-    let audioBlobs: Blob[];
+    let audioBlobs: Blob[] = [];
+    let paused: boolean = false;
+    let recording: boolean = true;
+    const recordOptions = { mimeType: "audio/webm; codecs=opus" };
 
     const getStream = async (): Promise<MediaStream> => {
       return input.type === "mic"
@@ -39,47 +42,61 @@ const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
           });
     };
 
+    const recordingCycle = () => {
+      if (paused || !stream || !recording) return;
+      let localAudioBlob: Blob[] = [];
+      let localrecorder: MediaRecorder = new MediaRecorder(stream, recordOptions);
+
+      recorder = localrecorder;
+      sendBack({
+        type: "RECORDER_CREATED",
+        recorder: recorder,
+      });
+
+      recorder.ondataavailable = (e: BlobEvent) => {
+        if (e.data && e.data.size > 0) {
+          localAudioBlob.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        for (let i = 0; i < localAudioBlob.length; i++) audioBlobs.push(localAudioBlob[i]);
+
+        sendBack({
+          type: "AUDIO_READY",
+          audioBlob: audioBlobs,
+          audioURL: null,
+        });
+
+        const audioChunk = new Blob(localAudioBlob, { type: "audio/webm" });
+        sendBack({
+          type: "SEND_AUDIO_CHUNK",
+          media: audioChunk,
+        });
+
+        if (localrecorder === recorder) recorder = null;
+        if (recording && !paused) {
+          setTimeout(() => recordingCycle(), 0);
+        }
+      };
+
+      recorder.start();
+      setTimeout(() => {
+        if (recorder && (recorder.state === "recording" || recorder.state === "paused")) {
+          recorder.stop();
+        }
+      }, timer);
+    };
+
     getStream()
       .then((s) => {
         const audioOnlyStream = new MediaStream();
-        s.getAudioTracks().forEach(track => audioOnlyStream.addTrack(track)); //getting audioonly for tab recorings
-
+        s.getAudioTracks().forEach((track) => audioOnlyStream.addTrack(track)); //getting audioonly for tab recorings
         stream = audioOnlyStream;
-        const options = { mimeType: 'audio/webm; codecs=opus' };
-        recorder = new MediaRecorder(stream, options);
-        audioBlobs = [];
 
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            audioBlobs.push(e.data)
-            console.log("audio came");
-            sendBack({
-              type: "SEND_AUDIO_CHUNK",
-              media: e.data,
-            });
-          };
-        };
-
-        recorder.onstop = () => {
-          blob = new Blob(audioBlobs, { type: "audio/webm" });
-          url = URL.createObjectURL(blob);
-
-          console.log("reached stopp!!!");
-          sendBack({
-            type: "AUDIO_READY",
-            audioBlob: audioBlobs,
-            audioURL: url,
-          });
-
-          sendBack({ type: "FINISH" });
-        };
-
-        sendBack({
-          type: "RECORDER_CREATED",
-          recorder: recorder,
-        });
-
-        recorder.start(4000);
+        const client_id = uuidv4();
+        localStorage.setItem("audioId", client_id);
+        recordingCycle();
       })
       .catch((error) => {
         console.error("Error setting up recorder:", error);
@@ -88,18 +105,32 @@ const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
 
     receive((event) => {
       if (event.type === "PAUSE") {
-        recorder?.pause();
+        recorder?.stop();
+        paused = true;
       }
 
       if (event.type === "RESUME") {
-        recorder?.resume();
+        paused = false;
+        if (!recorder || recorder?.state !== "inactive") recordingCycle();
+        else recorder?.resume();
       }
 
       if (event.type === "STOP") {
+        recording = false;
         recorder?.stop();
         stream?.getTracks().forEach((t) => t.stop());
 
+        const blob = new Blob(audioBlobs, { type: "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        sendBack({
+          type: "AUDIO_READY",
+          audioBlob: audioBlobs,
+          audioURL: url,
+        });
+
         console.log("finishing!");
+        localStorage.removeItem("audioId");
+        sendBack({ type: "FINISH" });
       }
     });
   }
@@ -128,8 +159,8 @@ export const recorderState = createMachine(
         actions: "setAudioData",
       },
       SAVE_RECORDS: {
-        actions: "setPrevRecords"
-      }
+        actions: "setPrevRecords",
+      },
     },
     states: {
       idle: {
@@ -159,7 +190,7 @@ export const recorderState = createMachine(
             actions: sendTo("collect.audio", { type: "STOP" }),
           },
           SEND_AUDIO_CHUNK: {
-            actions: "addToGlobalAudio"
+            actions: "addToGlobalAudio",
           },
           FINISH: "finish",
         },
@@ -215,7 +246,7 @@ export const recorderState = createMachine(
 
       addToGlobalAudio: assign({
         audio: ({ context, event }) => {
-          const newDate = (event as RecorderEvents & { type: "SEND_AUDIO_CHUNK" }).media
+          const newDate = (event as RecorderEvents & { type: "SEND_AUDIO_CHUNK" }).media;
           if (context.audio.length === 0) return [newDate];
           return [...context.audio, newDate];
         },

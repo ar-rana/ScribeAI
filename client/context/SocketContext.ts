@@ -42,7 +42,7 @@ const connectToSocket = fromCallback<SocketEvent, any>(
 
     socket.on("transciption", (msg: TranscriptData) => {
       console.log(
-        "data received TranscriptData: ", msg.message.transcript
+        "received TranscriptData: ", msg.message.transcript.substring(0, 12)
       );
       sendBack({ type: "RECEIVED_TRANSCRIPT", message: msg.message.transcript });
     });
@@ -61,12 +61,12 @@ const connectToSocket = fromCallback<SocketEvent, any>(
         reader.readAsDataURL(event.media);
         reader.onloadend = () => {
           const base64 = reader.result as string;
-          console.log("base64: ", base64.slice(0, 50));
+          // console.log("base64: ", base64.slice(0, 50));
           const rawBase64 = base64.split(",")[1];
 
           const data: AudioData = {
-            audio: base64,
-            client_id: localStorage.getItem("audioId") || "some_unique_id+last_bytes",
+            audio: rawBase64,
+            client_id: localStorage.getItem("audioId") || "NIL",
             user: event.user,
           };
           // console.log("data send to server 'audio': ", data);
@@ -140,7 +140,7 @@ export const socketState = createMachine(
             event as SocketEvent & { type: "RECEIVED_TRANSCRIPT" }
           ).message;
           const newTranscript = context.transcript + " " + newMsg;
-          console.log("new transcript: ", newTranscript);
+          // console.log("new transcript: ", newTranscript);
           return newTranscript;
         },
       }),

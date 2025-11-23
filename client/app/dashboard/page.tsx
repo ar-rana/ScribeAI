@@ -104,11 +104,10 @@ const page = () => {
     }
   };
 
-  // useEffect(() => {
-  //   console.log(state.context.type);
-  //   console.log(state.value);
-  //   console.log("context: ", state.context);
-  // }, [state.context.type, state.value, state.context.audioURL, session]);
+  useEffect(() => {
+    console.log("curr state: ", state.value);
+    console.log("context: ", state.context);
+  }, [state.value, state.context.audioURL]);
 
   const handleRecording = (type: Records) => {
     if (type === "start") {
