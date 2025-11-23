@@ -21,6 +21,7 @@ model Transcripts {
   title String @default("recording")
   transcript String
   duration String
+  date DateTime @default(now())
   client_audio_id String @unique
   userEmail String
 
