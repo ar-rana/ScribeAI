@@ -16,13 +16,21 @@ type CurrState = "recording..." | "paused" | "Start session";
 type Records = "start" | "stop" | "restart" | "pause" | "resume";
 
 export interface Recording {
-  id: string;
+  id?: string;
   title: string;
   transcript: string;
   duration: string;
   client_audio_id: string;
   userEmail: string;
   date: string;
+}
+
+export interface TranscriptRecord {
+  email: string;
+  transcript: string;
+  title?: string;
+  duration: string;
+  client_audio_id: string;
 }
 
 const page = () => {
@@ -36,6 +44,7 @@ const page = () => {
 
   const [selectedRecord, setSelectedRecord] = useState<Recording | null>(null);
   const [summary, setSummary] = useState<string>("");
+  const [title, setTitle] = useState<string>("");
   const [open, setOpen] = useState<boolean>(false);
 
   useEffect(() => {
@@ -107,6 +116,18 @@ const page = () => {
   useEffect(() => {
     console.log("curr state: ", state.value);
     console.log("context: ", state.context);
+
+    if (state.matches("finish")) {
+      const payload: TranscriptRecord = {
+        email: session?.user?.email,
+        transcript: socketSt.context.transcript,
+        title: title.trim().length === 0 ? undefined: title.trim(),
+        duration: "12:00",
+        client_audio_id: localStorage.getItem("audioId") as string
+      }
+      sendSoc({ type: "SEND_TRANSCRIPT", payload: payload });
+      send({ type: "KEEP_TRANSCRIPT", payload: payload });
+    }
   }, [state.value, state.context.audioURL]);
 
   const handleRecording = (type: Records) => {
@@ -153,6 +174,7 @@ const page = () => {
           <button onClick={() => getSummary()} className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
             Get Summary
           </button>
+          <input placeholder="Enter title for this recording" onChange={(e) => setTitle(e.target.value)} className="p-6 w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90" />
           <button
             onClick={() => {
               console.log("check");
@@ -197,22 +219,22 @@ const page = () => {
           <div className="w-full grid grid-cols-2 h-full p-4 gap-2">
             <button
               onClick={() => handleRecording("start")}
-              className="fa fa-play w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-4 pb-4"
+              className="fa fa-play w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-2 pb-2"
               title="start session"
             />
             <button
               onClick={() => handleRecording("pause")}
-              className="fa fa-pause w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-4 pb-4"
+              className="fa fa-pause w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-2 pb-2"
               title="pause"
             />
             <button
               onClick={() => handleRecording("stop")}
-              className="fa fa-stop w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-4 pb-4"
+              className="fa fa-stop w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-2 pb-2"
               title="stop"
             />
             <button
               onClick={() => handleRecording("restart")}
-              className="fa fa-repeat w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-4 pb-4"
+              className="fa fa-repeat w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-2 pb-2"
               title="reset"
             />
           </div>
@@ -236,7 +258,7 @@ const page = () => {
                   setSelectedRecord(rec);
                   setSummary("");
                 }}
-                key={rec.id}
+                key={rec.client_audio_id}
                 className="w-full h-12 bg-gray-200 flex items-center justify-between px-3 rounded cursor-pointer hover:bg-gray-300"
               >
                 <div className="flex flex-col">

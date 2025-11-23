@@ -1,6 +1,6 @@
-import { Recording } from "@/app/dashboard/page";
+import { Recording, TranscriptRecord } from "@/app/dashboard/page";
 import { assign, createMachine, fromCallback, sendTo } from "xstate";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 interface RecorderContext {
   recorder: MediaRecorder | null;
@@ -18,7 +18,8 @@ type RecorderEvents =
   | { type: "RESUME" }
   | { type: "RESTART" }
   | { type: "FINISH" }
-  | { type: "AUDIO_READY"; audioBlob: Blob[]; audioURL: any }
+  | { type: "AUDIO_READY"; audioURL: any }
+  | { type: "KEEP_TRANSCRIPT"; payload: TranscriptRecord }
   | { type: "RECORDER_CREATED"; recorder: MediaRecorder }
   | { type: "SEND_AUDIO_CHUNK"; media: Blob }
   | { type: "SAVE_RECORDS"; records: Recording[] };
@@ -26,6 +27,9 @@ type RecorderEvents =
 const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
   ({ sendBack, receive, input }) => {
     const timer = 6000;
+    // let displayRecorder: MediaRecorder | null = null;
+    // let diplayRecorderBlob: Blob[] = [];
+
     let recorder: MediaRecorder | null = null;
     let stream: MediaStream | null = null;
     let audioBlobs: Blob[] = [];
@@ -62,12 +66,6 @@ const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
       recorder.onstop = () => {
         for (let i = 0; i < localAudioBlob.length; i++) audioBlobs.push(localAudioBlob[i]);
 
-        sendBack({
-          type: "AUDIO_READY",
-          audioBlob: audioBlobs,
-          audioURL: null,
-        });
-
         const audioChunk = new Blob(localAudioBlob, { type: "audio/webm" });
         sendBack({
           type: "SEND_AUDIO_CHUNK",
@@ -95,8 +93,31 @@ const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
         stream = audioOnlyStream;
 
         const client_id = uuidv4();
-        localStorage.setItem("audioId", client_id);
+        if (!localStorage.getItem("audioId")) localStorage.setItem("audioId", client_id);
         recordingCycle();
+
+        // const clonedStream = stream.clone();
+        // displayRecorder = new MediaRecorder(clonedStream, recordOptions);
+
+        // displayRecorder.ondataavailable = (b: BlobEvent) => {
+        //   if (b.data && b.data.size > 0) {
+        //     diplayRecorderBlob.push(b.data);
+        //   }
+        // };
+
+        // displayRecorder.onstop = () => {
+        //   const blob = new Blob(diplayRecorderBlob, { type: "audio/webm" });
+        //   const url = URL.createObjectURL(blob);
+        //   console.log("AudioURL: ", url);
+
+        //   sendBack({
+        //     type: "AUDIO_READY",
+        //     audioURL: url,
+        //   });
+        //   console.log("closed");
+        // };
+
+        // displayRecorder.start(6000);
       })
       .catch((error) => {
         console.error("Error setting up recorder:", error);
@@ -107,29 +128,23 @@ const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
       if (event.type === "PAUSE") {
         recorder?.stop();
         paused = true;
+        // displayRecorder?.pause();
       }
 
       if (event.type === "RESUME") {
         paused = false;
         if (!recorder || recorder?.state !== "inactive") recordingCycle();
         else recorder?.resume();
+        // displayRecorder?.resume();
       }
 
       if (event.type === "STOP") {
         recording = false;
         recorder?.stop();
+        // displayRecorder?.stop();
         stream?.getTracks().forEach((t) => t.stop());
 
-        const blob = new Blob(audioBlobs, { type: "audio/webm" });
-        const url = URL.createObjectURL(blob);
-        sendBack({
-          type: "AUDIO_READY",
-          audioBlob: audioBlobs,
-          audioURL: url,
-        });
-
         console.log("finishing!");
-        localStorage.removeItem("audioId");
         sendBack({ type: "FINISH" });
       }
     });
@@ -203,6 +218,10 @@ export const recorderState = createMachine(
             target: "idle",
             actions: "restartRecording",
           },
+          KEEP_TRANSCRIPT: {
+            target: "idle",
+            actions: "appendRecordings",
+          },
         },
       },
     },
@@ -211,6 +230,21 @@ export const recorderState = createMachine(
     actions: {
       stopRecording: assign({
         recorder: null,
+      }),
+
+      appendRecordings: assign({
+        prevrecordings: ({ context, event }) => {
+          const recording = (event as RecorderEvents & { type: "KEEP_TRANSCRIPT" }).payload
+          const actualData: Recording = {
+            date: new Date().toISOString(),
+            duration: recording.duration,
+            client_audio_id: recording.client_audio_id,
+            title: recording.title || "recording",
+            transcript: recording.transcript,
+            userEmail: recording.email
+          };
+          return [actualData, ...context.prevrecordings];
+        }
       }),
 
       pauseRecording: ({ context }) => {
@@ -233,10 +267,11 @@ export const recorderState = createMachine(
       }),
 
       setAudioData: assign({
-        audio: ({ event }) =>
-          (event as RecorderEvents & { type: "AUDIO_READY" }).audioBlob,
-        audioURL: ({ event }) =>
-          (event as RecorderEvents & { type: "AUDIO_READY" }).audioURL,
+        audioURL: ({ event }) => {
+          const url = (event as RecorderEvents & { type: "AUDIO_READY" }).audioURL;
+          console.log("audioURL received:", url);
+          return url;
+        },
       }),
 
       setRecorder: assign({

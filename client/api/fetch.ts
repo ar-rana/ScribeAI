@@ -1,3 +1,4 @@
+import { TranscriptRecord } from "@/app/dashboard/page";
 import axios from "axios";
 
 const base_url = "http://localhost:3333/";
@@ -16,6 +17,7 @@ const url = {
   userLogin: "user/login",
   getRecordings: "list/",
   getSummary: "summary",
+  saveTranscript: "user/recording",
 };
 
 
@@ -70,6 +72,29 @@ export async function getRecordingSummary(payload: TranscriptPayload) {
     "Content-Type": "application/json",
   };
   const path = base_url + url.getSummary;
+  return axios
+    .post(path, payload, { headers })
+    .then((res) => {
+      return {
+        success: true,
+        data: res.data,
+      };
+    })
+    .catch((err) => {
+      const errMsg = err.response ? err.response.data : err.message;
+      console.log(errMsg);
+      return {
+        success: false,
+        data: errMsg,
+      };
+    });
+}
+
+export async function saveRecording(payload: TranscriptRecord) {
+  const headers = {
+    "Content-Type": "application/json",
+  };
+  const path = base_url + url.saveTranscript;
   return axios
     .post(path, payload, { headers })
     .then((res) => {

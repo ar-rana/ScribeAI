@@ -44,9 +44,10 @@ app.post("/user/login", async (req, res) => { // used
   }
 });
 
-app.post("/user/recording", async (req, res) => {
+app.post("/user/recording", async (req, res) => { // used
   try {
     const zdata = recording.parse(req.body);
+    console.log("record data: ", zdata);
     const recordingData = await prismaClient.transcripts.create({
       data: {
         userEmail: zdata.email,

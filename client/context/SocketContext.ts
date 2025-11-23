@@ -1,3 +1,5 @@
+import { saveRecording } from "@/api/fetch";
+import { TranscriptRecord } from "@/app/dashboard/page";
 import { io, Socket } from "socket.io-client";
 import { assign, createMachine, fromCallback, sendTo } from "xstate";
 
@@ -26,6 +28,7 @@ type SocketEvent =
   | { type: "DISCONNECT" }
   | { type: "DISCONNECT_CLIENT" }
   | { type: "CONNECT" }
+  | { type: "SEND_TRANSCRIPT", payload: TranscriptRecord }
   | { type: "CONNECTED"; socket: Socket }
   | { type: "SEND_AUDIO"; media: Blob; user: string }
   | { type: "SEND_CHECK"; message: string }
@@ -128,6 +131,9 @@ export const socketState = createMachine(
           RECEIVED_TRANSCRIPT: {
             actions: "appendTranscript",
           },
+          SEND_TRANSCRIPT: {
+            actions: "sendTranscript"
+          }
         },
       },
     },
@@ -144,6 +150,13 @@ export const socketState = createMachine(
           return newTranscript;
         },
       }),
+
+      sendTranscript: async ({ context, event }) => {
+        const payload: TranscriptRecord = (event as SocketEvent & { type: "SEND_TRANSCRIPT" }).payload;
+        const data = await saveRecording(payload);
+        if (data.success) console.log("response : ", data.data);
+        localStorage.removeItem("audioId");
+      },
 
       setSocket: assign({
         socket: ({ event }) =>
