@@ -1,6 +1,7 @@
 "use client";
 import { getAllPastRecordings, getRecordingSummary, userLoggedin } from "@/api/fetch";
 import { ThemeSwitch } from "@/components/Buttons/ThemeSwitch";
+import { download } from "@/components/helper";
 import Loading from "@/components/Loading";
 import SummaryModal from "@/components/modal/SummaryModal";
 import { recorderState } from "@/context/RecorderState";
@@ -14,7 +15,7 @@ type CurrState = "recording..." | "paused" | "Start session";
 
 type Records = "start" | "stop" | "restart" | "pause" | "resume";
 
-interface Recording {
+export interface Recording {
   id: string;
   title: string;
   transcript: string;
@@ -32,7 +33,7 @@ const page = () => {
 
   const [currentState, setCurrentState] = useState<CurrState>("Start session");
   const [transcript, setTranscript] = useState<string>("");
-  const [recordings, setRecordings] = useState<Recording[]>([]);
+
   const [selectedRecord, setSelectedRecord] = useState<Recording | null>(null);
   const [summary, setSummary] = useState<string>("");
   const [open, setOpen] = useState<boolean>(false);
@@ -75,7 +76,7 @@ const page = () => {
     const getRecordings = async () => {
       const data = await getAllPastRecordings(session?.user?.email);
       if (data.success) {
-        setRecordings(data.data.recordings);
+        send({ type: "SAVE_RECORDS",records: data.data.recordings })
       } else {
         console.log("failed to get recordings");
       }
@@ -128,6 +129,15 @@ const page = () => {
     }
   };
 
+  const downloadTranscript = () => {
+    if (!selectedRecord) {
+      alert("please select a record first from 'Previous Recordings'");
+      return;
+    }
+
+    download("transcript.txt", selectedRecord.transcript);
+  }
+
   // if (!session) {
   //   return (
   //       <Loading />
@@ -138,7 +148,7 @@ const page = () => {
     <div className="min-h-screen dark:bg-slate-800 text-zinc-200 dark:text-white p-4">
       <div className="flex flex-col sm:flex-row">
         <div className="flex-1 p-4 space-y-4 flex flex-col">
-          <button className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
+          <button onClick={() => downloadTranscript()} className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
             Get Transcript
           </button>
           <button onClick={() => getSummary()} className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
@@ -221,7 +231,7 @@ const page = () => {
             Previous Recordings
           </h1>
           <div className="p-2 bg-gray-300 dark:bg-slate-700 space-y-2 overflow-y-scroll max-h-80">
-            {recordings.map((rec) => (
+            {state.context.prevrecordings.map((rec) => (
               <div
                 onClick={() => {
                   setSelectedRecord(rec);

@@ -1,3 +1,4 @@
+import { Recording } from "@/app/dashboard/page";
 import { assign, createMachine, fromCallback, sendTo } from "xstate";
 
 interface RecorderContext {
@@ -5,6 +6,7 @@ interface RecorderContext {
   type: "mic" | "tab";
   audio: Blob[];
   audioURL: string | null;
+  prevrecordings: Recording[];
 }
 
 type RecorderEvents =
@@ -17,7 +19,8 @@ type RecorderEvents =
   | { type: "FINISH" }
   | { type: "AUDIO_READY"; audioBlob: Blob[]; audioURL: any }
   | { type: "RECORDER_CREATED"; recorder: MediaRecorder }
-  | { type: "SEND_AUDIO_CHUNK"; media: Blob };
+  | { type: "SEND_AUDIO_CHUNK"; media: Blob }
+  | { type: "SAVE_RECORDS"; records: Recording[] };
 
 const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
   ({ sendBack, receive, input }) => {
@@ -110,6 +113,7 @@ export const recorderState = createMachine(
       events: {} as RecorderEvents,
     },
     context: {
+      prevrecordings: [],
       recorder: null,
       type: "mic",
       audio: [],
@@ -123,6 +127,9 @@ export const recorderState = createMachine(
       AUDIO_READY: {
         actions: "setAudioData",
       },
+      SAVE_RECORDS: {
+        actions: "setPrevRecords"
+      }
     },
     states: {
       idle: {
@@ -182,6 +189,10 @@ export const recorderState = createMachine(
 
       setType: assign({
         type: ({ context }) => (context.type === "mic" ? "tab" : "mic"),
+      }),
+
+      setPrevRecords: assign({
+        prevrecordings: ({ event }) => (event as RecorderEvents & { type: "SAVE_RECORDS" }).records,
       }),
 
       restartRecording: assign({
