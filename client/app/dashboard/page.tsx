@@ -1,6 +1,8 @@
 "use client";
+import { getAllPastRecordings, getRecordingSummary, userLoggedin } from "@/api/fetch";
 import { ThemeSwitch } from "@/components/Buttons/ThemeSwitch";
 import Loading from "@/components/Loading";
+import SummaryModal from "@/components/modal/SummaryModal";
 import { recorderState } from "@/context/RecorderState";
 import { socketState } from "@/context/SocketContext";
 import { authClient } from "@/lib/auth-client";
@@ -12,6 +14,16 @@ type CurrState = "recording..." | "paused" | "Start session";
 
 type Records = "start" | "stop" | "restart" | "pause" | "resume";
 
+interface Recording {
+  id: string;
+  title: string;
+  transcript: string;
+  duration: string;
+  client_audio_id: string;
+  userEmail: string;
+  date: string;
+}
+
 const page = () => {
   const [session, setSession] = useState<any>(null);
 
@@ -20,11 +32,25 @@ const page = () => {
 
   const [currentState, setCurrentState] = useState<CurrState>("Start session");
   const [transcript, setTranscript] = useState<string>("");
+  const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [selectedRecord, setSelectedRecord] = useState<Recording | null>(null);
+  const [summary, setSummary] = useState<string>("");
+  const [open, setOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    authClient.getSession().then((session) => {
-      setSession(session.data ?? null);
-    });
+    authClient
+      .getSession()
+      .then((session) => {
+        setSession(session.data ?? null);
+        return session;
+      })
+      .then((session) => {
+        const payload = {
+          email: session.data?.user.email as string,
+          name: session.data?.user.name as string,
+        };
+        userLoggedin(payload);
+      });
     sendSoc({ type: "CONNECT" });
   }, []);
 
@@ -32,7 +58,11 @@ const page = () => {
     if (state.context.audio.length === 0) return;
 
     console.log("audio recognised", " user: ", session?.user?.email);
-    sendSoc({ type: "SEND_AUDIO", media: state.context.audio[state.context.audio.length - 1], user: session?.user?.email });
+    sendSoc({
+      type: "SEND_AUDIO",
+      media: state.context.audio[state.context.audio.length - 1],
+      user: session?.user?.email,
+    });
   }, [state.context.audio]);
 
   useEffect(() => {
@@ -40,6 +70,38 @@ const page = () => {
 
     setTranscript(socketSt.context.transcript);
   }, [socketSt.context.transcript]);
+
+  useEffect(() => {
+    const getRecordings = async () => {
+      const data = await getAllPastRecordings(session?.user?.email);
+      if (data.success) {
+        setRecordings(data.data.recordings);
+      } else {
+        console.log("failed to get recordings");
+      }
+    };
+
+    getRecordings();
+  }, [session]);
+
+  const getSummary = async () => {
+    if (!selectedRecord) return;
+    if (summary) {
+      setOpen(true);
+      return;
+    }
+    const payload = {
+      email: session?.user?.email,
+      client_id: selectedRecord?.client_audio_id
+    }
+    const data = await getRecordingSummary(payload);
+    if (data.success) {
+      setSummary(data.data.summary);
+      setOpen(true);
+    } else {
+      console.log("failed to get recordings");
+    }
+  };
 
   // useEffect(() => {
   //   console.log(state.context.type);
@@ -57,7 +119,7 @@ const page = () => {
       setCurrentState("Start session");
     } else if (type === "pause") {
       send({ type: "PAUSE" });
-      setCurrentState("paused")
+      setCurrentState("paused");
     } else if (type === "restart") {
       send({ type: "RESTART" });
       setCurrentState("Start session");
@@ -77,16 +139,26 @@ const page = () => {
       <div className="flex flex-col sm:flex-row">
         <div className="flex-1 p-4 space-y-4 flex flex-col">
           <button className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
-            Generate Transcript
+            Get Transcript
           </button>
-          <button className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
-            Generate Summary
+          <button onClick={() => getSummary()} className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
+            Get Summary
           </button>
-          <button onClick={() => {console.log("check"); sendSoc({ type: "SEND_CHECK", message: "hhh"})}} className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
+          <button
+            onClick={() => {
+              console.log("check");
+              sendSoc({ type: "SEND_CHECK", message: "hhh" });
+            }}
+            className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90"
+          >
             Test Socket
           </button>
-          {(state.context.audioURL && state.matches("finish")) && (
-            <audio className="w-full" controls src={state.context.audioURL}></audio>
+          {state.context.audioURL && state.matches("finish") && (
+            <audio
+              className="w-full"
+              controls
+              src={state.context.audioURL}
+            ></audio>
           )}
           <span
             onClick={() => {
@@ -135,7 +207,7 @@ const page = () => {
               title="reset"
             />
           </div>
-          <div className="w-full bg-gray-300 dark:bg-slate-600 p-4 flex flex-col shadow-md">
+          <div className="w-full bg-gray-300 dark:bg-slate-600 p-3 flex flex-col shadow-md">
             <span className="mb-1.5 w-full font-bold text-lg text-gray-800 dark:text-white">
               Live Transcript
             </span>
@@ -149,35 +221,14 @@ const page = () => {
             Previous Recordings
           </h1>
           <div className="p-2 bg-gray-300 dark:bg-slate-700 space-y-2 overflow-y-scroll max-h-80">
-            {[
-              {
-                id: "rec1",
-                title: "Client Meeting - Design",
-                duration: "12:34",
-                date: "2025-11-20",
-              },
-              {
-                id: "rec2",
-                title: "Interview - Frontend",
-                duration: "25:10",
-                date: "2025-11-19",
-              },
-              {
-                id: "rec3",
-                title: "Daily Standup",
-                duration: "03:45",
-                date: "2025-11-21",
-              },
-              {
-                id: "rec4",
-                title: "Daily Standup",
-                duration: "03:45",
-                date: "2025-11-21",
-              },
-            ].map((rec) => (
+            {recordings.map((rec) => (
               <div
+                onClick={() => {
+                  setSelectedRecord(rec);
+                  setSummary("");
+                }}
                 key={rec.id}
-                className="w-full h-12 bg-gray-200 flex items-center justify-between px-3 rounded"
+                className="w-full h-12 bg-gray-200 flex items-center justify-between px-3 rounded cursor-pointer hover:bg-gray-300"
               >
                 <div className="flex flex-col">
                   <span className="font-medium text-sm text-gray-800">
@@ -191,8 +242,22 @@ const page = () => {
               </div>
             ))}
           </div>
+          <button
+            onClick={async () => {
+              await authClient.signOut();
+              window.location.href = "/login";
+            }}
+            className="w-full h-12 bg-red-800 rounded-xl hover:opacity-90"
+          >
+            Logout
+          </button>
         </div>
       </div>
+      <SummaryModal
+        open={open}
+        setOpen={setOpen}
+        summary={summary}
+      />
     </div>
   );
 };

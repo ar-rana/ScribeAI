@@ -28,7 +28,7 @@ app.get("/", (req, res) => {
   res.send("Server is Online!");
 });
 
-app.post("/user/login", async (req, res) => {
+app.post("/user/login", async (req, res) => { // used
   try {
     const zdata = loginPayloadSchema.parse(req.body);
     const user = await prismaClient.users.create({
@@ -79,7 +79,7 @@ app.post("/transcript", async (req, res) => {
   }
 });
 
-app.post("/summary", async (req, res) => {
+app.post("/summary", async (req, res) => { // used
   try {
     const zdata = transcriptPayload.parse(req.body);
     const transcript = await prismaClient.transcripts.findFirst({
@@ -99,7 +99,7 @@ app.post("/summary", async (req, res) => {
   }
 });
 
-app.get("/list/:email", async (req, res) => {
+app.get("/list/:email", async (req, res) => { // used
   const { email } = req.params;
   try {
     const transcripts = await prismaClient.transcripts.findMany({

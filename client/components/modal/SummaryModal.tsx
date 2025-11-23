@@ -26,7 +26,7 @@ const SummaryModal: React.FC<ModalInterface> = ({ open, setOpen, summary }) => {
           onClick={() => setOpen(false)}
         />
       </div>
-      <div className="mt-4">
+      <div className="flex">
         <span className="p-4 font-medium">{summary}</span>
       </div>
     </Modal>

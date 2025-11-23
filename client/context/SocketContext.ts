@@ -65,8 +65,8 @@ const connectToSocket = fromCallback<SocketEvent, any>(
           const rawBase64 = base64.split(",")[1];
 
           const data: AudioData = {
-            audio: rawBase64,
-            client_id: "any_uuid_will_do",
+            audio: base64,
+            client_id: localStorage.getItem("audioId") || "some_unique_id+last_bytes",
             user: event.user,
           };
           // console.log("data send to server 'audio': ", data);
