@@ -2,7 +2,6 @@ import { assign, createMachine, fromCallback, sendTo } from "xstate";
 
 interface RecorderContext {
   recorder: MediaRecorder | null;
-  transcript: string;
   type: "mic" | "tab";
   audio: Blob[];
   audioURL: string | null;
@@ -17,7 +16,8 @@ type RecorderEvents =
   | { type: "RESTART" }
   | { type: "FINISH" }
   | { type: "AUDIO_READY"; audioBlob: Blob[]; audioURL: any }
-  | { type: "RECORDER_CREATED"; recorder: MediaRecorder };
+  | { type: "RECORDER_CREATED"; recorder: MediaRecorder }
+  | { type: "SEND_AUDIO_CHUNK"; media: Blob };
 
 const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
   ({ sendBack, receive, input }) => {
@@ -38,12 +38,23 @@ const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
 
     getStream()
       .then((s) => {
-        stream = s;
-        recorder = new MediaRecorder(stream);
+        const audioOnlyStream = new MediaStream();
+        s.getAudioTracks().forEach(track => audioOnlyStream.addTrack(track)); //getting audioonly for tab recorings
+
+        stream = audioOnlyStream;
+        const options = { mimeType: 'audio/webm; codecs=opus' };
+        recorder = new MediaRecorder(stream, options);
         audioBlobs = [];
 
         recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioBlobs.push(e.data);
+          if (e.data.size > 0) {
+            audioBlobs.push(e.data)
+            console.log("audio came");
+            sendBack({
+              type: "SEND_AUDIO_CHUNK",
+              media: e.data,
+            });
+          };
         };
 
         recorder.onstop = () => {
@@ -65,7 +76,7 @@ const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
           recorder: recorder,
         });
 
-        recorder.start();
+        recorder.start(4000);
       })
       .catch((error) => {
         console.error("Error setting up recorder:", error);
@@ -100,7 +111,6 @@ export const recorderState = createMachine(
     },
     context: {
       recorder: null,
-      transcript: "",
       type: "mic",
       audio: [],
       audioURL: null,
@@ -140,6 +150,9 @@ export const recorderState = createMachine(
           },
           STOP: {
             actions: sendTo("collect.audio", { type: "STOP" }),
+          },
+          SEND_AUDIO_CHUNK: {
+            actions: "addToGlobalAudio"
           },
           FINISH: "finish",
         },
@@ -187,6 +200,14 @@ export const recorderState = createMachine(
       setRecorder: assign({
         recorder: ({ event }) =>
           (event as RecorderEvents & { type: "RECORDER_CREATED" }).recorder,
+      }),
+
+      addToGlobalAudio: assign({
+        audio: ({ context, event }) => {
+          const newDate = (event as RecorderEvents & { type: "SEND_AUDIO_CHUNK" }).media
+          if (context.audio.length === 0) return [newDate];
+          return [...context.audio, newDate];
+        },
       }),
 
       pauseAndPlay: ({ context }) => {

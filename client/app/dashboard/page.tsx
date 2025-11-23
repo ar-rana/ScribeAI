@@ -19,21 +19,33 @@ const page = () => {
   const [socketSt, sendSoc] = useMachine(socketState);
 
   const [currentState, setCurrentState] = useState<CurrState>("Start session");
+  const [transcript, setTranscript] = useState<string>("");
 
   useEffect(() => {
     authClient.getSession().then((session) => {
-      setSession(session ?? null);
+      setSession(session.data ?? null);
     });
     sendSoc({ type: "CONNECT" });
   }, []);
 
   useEffect(() => {
-    console.log(state.context.type);
-    console.log(state.value);
-    if (state.context.audioURL) console.log("audio URL exists");
-    console.log(state.context.audioURL);
-    console.log("context: ", state.context);
-  }, [state.context.type, state.value, state.context.audioURL]);
+    if (state.context.audio.length === 0) return;
+
+    console.log("audio recognised", " user: ", session?.user?.email);
+    sendSoc({ type: "SEND_AUDIO", media: state.context.audio[state.context.audio.length - 1], user: session?.user?.email });
+  }, [state.context.audio]);
+
+  useEffect(() => {
+    if (!socketSt.context.transcript) return;
+
+    setTranscript(socketSt.context.transcript);
+  }, [socketSt.context.transcript]);
+
+  // useEffect(() => {
+  //   console.log(state.context.type);
+  //   console.log(state.value);
+  //   console.log("context: ", state.context);
+  // }, [state.context.type, state.value, state.context.audioURL, session]);
 
   const handleRecording = (type: Records) => {
     if (type === "start") {
@@ -70,7 +82,7 @@ const page = () => {
           <button className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
             Generate Summary
           </button>
-          <button onClick={() => sendSoc({ type: "SEND_CHECK", message: "hhh"})} className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
+          <button onClick={() => {console.log("check"); sendSoc({ type: "SEND_CHECK", message: "hhh"})}} className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90">
             Test Socket
           </button>
           {(state.context.audioURL && state.matches("finish")) && (
@@ -127,8 +139,8 @@ const page = () => {
             <span className="mb-1.5 w-full font-bold text-lg text-gray-800 dark:text-white">
               Live Transcript
             </span>
-            <span className="h-12 w-full text-sm text-gray-800 dark:text-white">
-              sads
+            <span className="max-h-20 w-full text-sm text-gray-800 dark:text-white overflow-y-auto">
+              {transcript}
             </span>
           </div>
         </div>
