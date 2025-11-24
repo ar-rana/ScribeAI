@@ -8,7 +8,7 @@ ScribeAI is a full-stack Next.js & Node.js application designed to provide real-
 
 1.  **Real-Time Transcription:** Capture audio from **microphone input** or **shared meeting tabs** the transcribe them in real time using **Gemini API**.
 2.  **Handle Long Sessions:** Can handle sessions for **1 hour or more** of recording time using chunked audio streaming depending on user's machine.
-3.  **Resilient Streaming:** Handles graceful reconnect and data persistence.
+3.  **Resilient Streaming:** Handles graceful reconnect and data persistence, enures minimal data loss even if connection is unstable.
 4.  **Post-Processing:** Get **Summary**, **Transcript** of your Audio.
 5.  **Low-Latency UI:** Use **Socket.io** for real-time transcription.
 6.  **Reording Controls:** Manage state of you recording (`play`, `paused`, `stop/finish`, `reset`) within the UI.
