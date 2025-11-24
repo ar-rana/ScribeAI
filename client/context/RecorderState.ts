@@ -232,7 +232,6 @@ export const recorderState = createMachine(
             actions: "restartRecording",
           },
           KEEP_TRANSCRIPT: {
-            target: "idle",
             actions: "appendRecordings",
           },
         },
@@ -280,6 +279,7 @@ export const recorderState = createMachine(
           audio: [],
           audioURL: null,
           recorder: null,
+          duration: 0,
         };
       }),
 

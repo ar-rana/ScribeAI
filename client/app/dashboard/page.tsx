@@ -112,6 +112,7 @@ const page = () => {
     console.log("context: ", state.context);
 
     if (state.matches("idle")) {
+      // console.log("clearing");
       sendSoc({ type: "CLEAR_TRANSCRIPT" });
     }
     if (state.matches("finish")) {
