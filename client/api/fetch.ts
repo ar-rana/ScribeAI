@@ -14,35 +14,11 @@ interface TranscriptPayload {
 }
 
 const url = {
-  userLogin: "user/login",
   getRecordings: "list/",
   getSummary: "summary",
   saveTranscript: "user/recording",
 };
 
-
-export async function userLoggedin(payload: LoginPayload) {
-  const headers = {
-    "Content-Type": "application/json",
-  };
-  const path = base_url + url.userLogin;
-  return axios
-    .post(path, payload, { headers })
-    .then((res) => {
-      return {
-        success: true,
-        data: res.data,
-      };
-    })
-    .catch((err) => {
-      const errMsg = err.response ? err.response.data : err.message;
-      console.log(errMsg);
-      return {
-        success: false,
-        data: errMsg,
-      };
-    });
-}
 
 export async function getAllPastRecordings(email: string) {
   const headers = {
@@ -50,7 +26,7 @@ export async function getAllPastRecordings(email: string) {
   };
   const path = base_url + url.getRecordings + email;
   return axios
-    .get(path, { headers })
+    .get(path, { headers, withCredentials: true })
     .then((res) => {
       return {
         success: true,
@@ -73,7 +49,7 @@ export async function getRecordingSummary(payload: TranscriptPayload) {
   };
   const path = base_url + url.getSummary;
   return axios
-    .post(path, payload, { headers })
+    .post(path, payload, { headers, withCredentials: true })
     .then((res) => {
       return {
         success: true,
@@ -96,7 +72,7 @@ export async function saveRecording(payload: TranscriptRecord) {
   };
   const path = base_url + url.saveTranscript;
   return axios
-    .post(path, payload, { headers })
+    .post(path, payload, { headers, withCredentials: true })
     .then((res) => {
       return {
         success: true,

@@ -5,6 +5,9 @@ import SocketService from "./sockets/recording.js";
 import z from 'zod';
 import prismaClient from './services/prisma.js';
 import { generateSummary } from './services/geminiAI.js';
+import { authMiddleware } from './middleware.js';
+import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
+import { auth } from './auth.js';
 
 const app = express();
 const port = 3333;
@@ -24,24 +27,24 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+app.all('/api/auth/{*any}', toNodeHandler(auth));
+app.get("/api/me", async (req, res) => {
+    const session = await auth.api.getSession({
+     headers: fromNodeHeaders(req.headers),
+   });
+   return res.json(session);
+});
+
 app.get("/", (req, res) => {
   res.send("Server is Online!");
 });
 
-app.post("/user/login", async (req, res) => { // used
-  try {
-    const zdata = loginPayloadSchema.parse(req.body);
-    const user = await prismaClient.users.create({
-      data: {
-        name : zdata.name,
-        email : zdata.email
-      },
-    });
-    res.status(200).json({ message: "User saved", user: user.email });
-  } catch (err) {
-    const error = err as Error;
-    res.status(400).json({ error: error.message || "Invalid Input" });
-  }
+app.get("/a", authMiddleware, (req, res) => {
+  res.send("Server is Online and Protected!!");
+});
+
+app.get("/dashboard", (req, res) => {
+  res.redirect("http://localhost:3000/dashboard");
 });
 
 app.post("/user/recording", async (req, res) => { // used
@@ -52,7 +55,7 @@ app.post("/user/recording", async (req, res) => { // used
       data: {
         userEmail: zdata.email,
         transcript: zdata.transcript,
-        title: zdata.title,
+        title: zdata.title as string,
         duration: zdata.duration,
         client_audio_id: zdata.client_audio_id
       },
@@ -80,7 +83,7 @@ app.post("/transcript", async (req, res) => {
   }
 });
 
-app.post("/summary", async (req, res) => { // used
+app.post("/summary", authMiddleware, async (req, res) => { // used
   try {
     const zdata = transcriptPayload.parse(req.body);
     const transcript = await prismaClient.transcripts.findFirst({
@@ -100,12 +103,12 @@ app.post("/summary", async (req, res) => { // used
   }
 });
 
-app.get("/list/:email", async (req, res) => { // used
+app.get("/list/:email", authMiddleware, async (req, res) => { // used
   const { email } = req.params;
   try {
     const transcripts = await prismaClient.transcripts.findMany({
       where: {
-        userEmail: email,
+        userEmail: email as string,
       },
     });
     res.status(200).json({ recordings: transcripts });

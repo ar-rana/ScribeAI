@@ -1,5 +1,5 @@
 "use client";
-import { getAllPastRecordings, getRecordingSummary, userLoggedin } from "@/api/fetch";
+import { getAllPastRecordings, getRecordingSummary } from "@/api/fetch";
 import { ThemeSwitch } from "@/components/Buttons/ThemeSwitch";
 import { download } from "@/components/helper";
 import Loading from "@/components/Loading";
@@ -52,15 +52,7 @@ const page = () => {
       .getSession()
       .then((session) => {
         setSession(session.data ?? null);
-        return session;
       })
-      .then((session) => {
-        const payload = {
-          email: session.data?.user.email as string,
-          name: session.data?.user.name as string,
-        };
-        userLoggedin(payload);
-      });
     sendSoc({ type: "CONNECT" });
   }, []);
 
@@ -158,11 +150,11 @@ const page = () => {
     download("transcript.txt", selectedRecord.transcript);
   }
 
-  // if (!session) {
-  //   return (
-  //       <Loading />
-  //   )
-  // }
+  if (!session) {
+    return (
+        <Loading />
+    )
+  }
 
   return (
     <div className="min-h-screen dark:bg-slate-800 text-zinc-200 dark:text-white p-4">
@@ -265,7 +257,7 @@ const page = () => {
                   <span className="font-medium text-sm text-gray-800">
                     {rec.title}
                   </span>
-                  <span className="text-xs text-gray-800">{rec.date}</span>
+                  <span className="text-xs text-gray-800">{rec.date.substring(0, 10)}</span>
                 </div>
                 <span className="text-sm font-semibold text-gray-800">
                   {rec.duration}
