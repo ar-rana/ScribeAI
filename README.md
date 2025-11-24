@@ -70,6 +70,12 @@ This project utilizes a **streaming architecture** to meet the low-latency, real
 
 ---
 
+## Video Walkthrough of the Project
+
+[Watch the Video Walkthrough](https://drive.google.com/file/d/123pgyjqGG2-GRJrrzlV_ziBwgNEznJ7a/view?usp=sharing)
+
+---
+
 ## Long-Session Scalability
 
 ScribeAI is designed to last for long-session durations of upto 1 hour or more, I decided to use MediaRecorder over WebRTC primarily because before this project there were alot of requirements of this project that I had never worked with like XState, Audio Streaming, WebRTC and due to the time constraint specifically for me during exam time, learning a new framework like WebRTC would not work, thus I picked MediaRecorder. 
