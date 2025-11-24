@@ -175,7 +175,7 @@ const page = () => {
             Get Summary
           </button>
           <input placeholder="Enter title for this recording" onChange={(e) => setTitle(e.target.value)} className="p-6 w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90" />
-          <button
+          {/* <button
             onClick={() => {
               console.log("check");
               sendSoc({ type: "SEND_CHECK", message: "hhh" });
@@ -183,7 +183,7 @@ const page = () => {
             className="w-full h-12 bg-indigo-600 rounded-xl hover:opacity-90"
           >
             Test Socket
-          </button>
+          </button> */}
           {state.context.audioURL && state.matches("finish") && (
             <audio
               className="w-full"
@@ -216,7 +216,7 @@ const page = () => {
           <ThemeSwitch />
         </div>
         <div className="flex-2 bg-gray-100 dark:bg-slate-700 shadow-md">
-          <div className="w-full grid grid-cols-2 h-full p-4 gap-2">
+          <div className="w-full grid grid-cols-2 h-[70%] p-4 gap-2">
             <button
               onClick={() => handleRecording("start")}
               className="fa fa-play w-full bg-indigo-600 rounded-xl font-semibold hover:opacity-90 pt-2 pb-2"
@@ -242,8 +242,8 @@ const page = () => {
             <span className="mb-1.5 w-full font-bold text-lg text-gray-800 dark:text-white">
               Live Transcript
             </span>
-            <span className="max-h-20 w-full text-sm text-gray-800 dark:text-white overflow-y-auto">
-              {transcript}
+            <span className="min-h-20 max-h-26 w-full text-sm text-gray-800 dark:text-white overflow-y-auto">
+              {transcript}               
             </span>
           </div>
         </div>
