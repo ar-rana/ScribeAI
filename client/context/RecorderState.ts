@@ -27,7 +27,7 @@ type RecorderEvents =
 
 const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
   ({ sendBack, receive, input }) => {
-    const timer = 6000;
+    const timer = 4000;
     let displayRecorder: MediaRecorder | null = null;
     let diplayRecorderBlob: Blob[] = [];
     let clonedStream: MediaStream | null = null;
@@ -96,6 +96,7 @@ const startRecording = fromCallback<RecorderEvents, { type: "mic" | "tab" }>(
 
         const client_id = uuidv4();
         if (!localStorage.getItem("audioId")) localStorage.setItem("audioId", client_id);
+        if (!localStorage.getItem("idx")) localStorage.setItem("idx", "0");
         recordingCycle();
 
         clonedStream = stream.clone();
@@ -272,11 +273,16 @@ export const recorderState = createMachine(
         prevrecordings: ({ event }) => (event as RecorderEvents & { type: "SAVE_RECORDS" }).records,
       }),
 
-      restartRecording: assign({
-        audio: [],
-        audioURL: null,
-        recorder: null,
+      restartRecording: assign((context, event) => {
+        localStorage.removeItem("audioId");
+        localStorage.removeItem("idx");
+        return {
+          audio: [],
+          audioURL: null,
+          recorder: null,
+        };
       }),
+
 
       setAudioData: assign({
         audioURL: ({ event }) => (event as RecorderEvents & { type: "AUDIO_READY" }).audioURL,

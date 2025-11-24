@@ -59,9 +59,12 @@ const page = () => {
     if (state.context.audio.length === 0) return;
 
     // console.log("audio recognised", " user: ", session?.user?.email);
+    let index: number = parseInt(localStorage.getItem("idx") as string);
+    // console.log("local prev idx -> ", index);
+    if (index >= state.context.audio.length) index = state.context.audio.length - 1;
     sendSoc({
       type: "SEND_AUDIO",
-      media: state.context.audio[state.context.audio.length - 1],
+      media: state.context.audio[index],
       user: session?.user?.email,
     });
   }, [state.context.audio]);
@@ -108,6 +111,9 @@ const page = () => {
     console.log("curr state: ", state.value);
     console.log("context: ", state.context);
 
+    if (state.matches("idle")) {
+      sendSoc({ type: "CLEAR_TRANSCRIPT" });
+    }
     if (state.matches("finish")) {
       const payload: TranscriptRecord = {
         email: session?.user?.email,
@@ -199,7 +205,7 @@ const page = () => {
               onChange={() => send({ type: "TOGGLE_RECORDING" })}
               className="sr-only peer"
             />
-            <div className="relative w-9 h-5 bg-rose-600 rounded-full peer dark:bg-rose-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600 dark:peer-checked:bg-purple-600"></div>
+            <div className="relative w-9 h-5 bg-rose-600 rounded-full peer dark:bg-rose-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600 dark:peer-checked:bg-purple-600"></div>
             <span className="select-none ms-3 text-sm font-medium text-heading text-gray-800 dark:text-white">
               Record Tab
             </span>

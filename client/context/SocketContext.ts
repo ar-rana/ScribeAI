@@ -30,6 +30,7 @@ type SocketEvent =
   | { type: "CONNECT" }
   | { type: "SEND_TRANSCRIPT", payload: TranscriptRecord }
   | { type: "CONNECTED"; socket: Socket }
+  | { type: "CLEAR_TRANSCRIPT" }
   | { type: "SEND_AUDIO"; media: Blob; user: string }
   | { type: "SEND_CHECK"; message: string }
   | { type: "RECEIVED_MSG"; message: string }
@@ -50,6 +51,14 @@ const connectToSocket = fromCallback<SocketEvent, any>(
 
     socket.on("check_response", (msg: string) => {
       console.log("received cool message: ", msg);
+    });
+
+    socket.on("audio_received", (msg: string) => {
+      if (!localStorage.getItem("idx")) return;
+      let idx: number = parseInt(localStorage.getItem("idx") as string);
+      idx++;
+      localStorage.setItem("idx", idx.toString());
+      // console.log("local idx: ", localStorage.getItem("idx"));
     });
 
     receive((event) => {
@@ -131,6 +140,9 @@ export const socketState = createMachine(
           },
           SEND_TRANSCRIPT: {
             actions: "sendTranscript"
+          },
+          CLEAR_TRANSCRIPT: {
+            actions: "clearTranscript"
           }
         },
       },
@@ -154,6 +166,7 @@ export const socketState = createMachine(
         const data = await saveRecording(payload);
         if (data.success) console.log("response : ", data.data);
         localStorage.removeItem("audioId");
+        localStorage.removeItem("idx");
       },
 
       setSocket: assign({
@@ -163,6 +176,10 @@ export const socketState = createMachine(
 
       clearSocket: assign({
         socket: null,
+      }),
+
+      clearTranscript: assign({
+        transcript: "",
       }),
     },
 
