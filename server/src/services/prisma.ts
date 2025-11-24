@@ -6,5 +6,9 @@ const prismaClient = new PrismaClient({
 
 export default prismaClient;
 
+export const DOCKER_DB = "postgresql://root:myperfectpassword@localhost:5433/SCRIBEAI_DB";
+
+// npx @better-auth/cli migrate
+
 // npx prisma migrate dev --name init
 // npx prisma generate
