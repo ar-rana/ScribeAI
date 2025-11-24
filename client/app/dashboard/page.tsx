@@ -8,7 +8,6 @@ import { recorderState } from "@/context/RecorderState";
 import { socketState } from "@/context/SocketContext";
 import { authClient } from "@/lib/auth-client";
 import { useMachine } from "@xstate/react";
-import { redirect } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type CurrState = "recording..." | "paused" | "Start session";
@@ -59,7 +58,7 @@ const page = () => {
   useEffect(() => {
     if (state.context.audio.length === 0) return;
 
-    console.log("audio recognised", " user: ", session?.user?.email);
+    // console.log("audio recognised", " user: ", session?.user?.email);
     sendSoc({
       type: "SEND_AUDIO",
       media: state.context.audio[state.context.audio.length - 1],
@@ -114,7 +113,7 @@ const page = () => {
         email: session?.user?.email,
         transcript: socketSt.context.transcript,
         title: title.trim().length === 0 ? undefined: title.trim(),
-        duration: "12:00",
+        duration: state.context.duration.toString(),
         client_audio_id: localStorage.getItem("audioId") as string
       }
       sendSoc({ type: "SEND_TRANSCRIPT", payload: payload });
@@ -176,7 +175,7 @@ const page = () => {
           >
             Test Socket
           </button> */}
-          {state.context.audioURL && state.matches("finish") && (
+          {state.context.audioURL && (
             <audio
               className="w-full"
               controls

@@ -44,9 +44,7 @@ const connectToSocket = fromCallback<SocketEvent, any>(
     });
 
     socket.on("transciption", (msg: TranscriptData) => {
-      console.log(
-        "received TranscriptData: ", msg.message.transcript.substring(0, 12)
-      );
+      // console.log("received TranscriptData: ", msg.message.transcript.substring(0, 12));
       sendBack({ type: "RECEIVED_TRANSCRIPT", message: msg.message.transcript });
     });
 
