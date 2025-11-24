@@ -82,7 +82,9 @@ ScribeAI is designed to last for long-session durations of upto 1 hour or more, 
 
 I handle long-session duration by sending smaller chunks of audio (like 6sec), and get them transcribed, the transcription is collected on the frontend and displayed to the user live. the length of the session also depends on the users machine, because I may send chunked audio, which reduces memory overhead, but in my application I have also implemented a audio 'playback functionality' which buffers the audio in the users memory. Without this playback functionality we can indefinity send continuous audio chunks to the server and get their transcription if we don't save the audio chunks.
 
-But to ensure that the data is not lost even during connection interruptions we will have to store this audio somewhere to send it back for transcription after the connection is stable again. So for long-sessions my architecture can essentially persist, for as long as the users machine allows due to the playback functionality, if we remove that we can send audio for transcription indefinity if we choose not to store all the chunks.
+But to ensure that the data is not lost even during connection interruptions we will have to store this audio somewhere to send it back for transcription after the connection is stable again. So for long-sessions my architecture can essentially persist, for as long as the users machine allows due to the playback functionality, if we remove that we can send audio for transcription indefinity if we choose not to store all the chunks. 
+
+We need to ensure that system persists and sends data in the right order even if the connection is lost, we ensure that by following a architecture similar to the STOP-N-WAIT ARQ technique of the Data link layer in networking, where some data is sent and the pointer to next chunk is only incremented if we receive the acknowledgement from the server.  
 
 ---
 
