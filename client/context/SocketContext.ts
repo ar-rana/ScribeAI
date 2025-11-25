@@ -7,6 +7,7 @@ interface SocketContext {
   socket: Socket | null;
   messages: string[];
   transcript: string;
+  notify: boolean;
 }
 
 interface AudioData {
@@ -21,6 +22,7 @@ interface TranscriptData {
     transcript: string;
     client_id: string;
     user: string;
+    final?: boolean;
   };
 }
 
@@ -31,7 +33,8 @@ type SocketEvent =
   | { type: "SEND_TRANSCRIPT", payload: TranscriptRecord }
   | { type: "CONNECTED"; socket: Socket }
   | { type: "CLEAR_TRANSCRIPT" }
-  | { type: "SEND_AUDIO"; media: Blob; user: string }
+  | { type: "NOTIFY_FINAL" }
+  | { type: "SEND_AUDIO"; media: Blob; user: string; final?:boolean }
   | { type: "SEND_CHECK"; message: string }
   | { type: "RECEIVED_MSG"; message: string }
   | { type: "RECEIVED_TRANSCRIPT"; message: string };
@@ -47,6 +50,10 @@ const connectToSocket = fromCallback<SocketEvent, any>(
     socket.on("transciption", (msg: TranscriptData) => {
       // console.log("received TranscriptData: ", msg.message.transcript.substring(0, 12));
       sendBack({ type: "RECEIVED_TRANSCRIPT", message: msg.message.transcript });
+      if (msg.message.final) {
+        console.log("notifiying");
+        sendBack({ type: "NOTIFY_EVENT" });
+      }
     });
 
     socket.on("check_response", (msg: string) => {
@@ -102,6 +109,7 @@ export const socketState = createMachine(
       socket: null,
       messages: [],
       transcript: "",
+      notify: false,
     },
     initial: "disconnected",
     on: {
@@ -143,6 +151,9 @@ export const socketState = createMachine(
           },
           CLEAR_TRANSCRIPT: {
             actions: "clearTranscript"
+          },
+          NOTIFY_FINAL: {
+            actions: "notification"
           }
         },
       },
@@ -172,6 +183,10 @@ export const socketState = createMachine(
       setSocket: assign({
         socket: ({ event }) =>
           (event as SocketEvent & { type: "CONNECTED" }).socket,
+      }),
+
+      notification: assign({
+        notify: ({ context }) => !context.notify,
       }),
 
       clearSocket: assign({

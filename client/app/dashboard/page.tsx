@@ -45,6 +45,7 @@ const page = () => {
   const [summary, setSummary] = useState<string>("");
   const [title, setTitle] = useState<string>("");
   const [open, setOpen] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     authClient
@@ -116,6 +117,41 @@ const page = () => {
       sendSoc({ type: "CLEAR_TRANSCRIPT" });
     }
     if (state.matches("finish")) {
+      setLoading(true);
+      let index: number = parseInt(localStorage.getItem("idx") as string);
+      if (index < state.context.audio.length) {
+        for (index;index < state.context.audio.length; index++) {
+          let final: boolean = (index === state.context.audio.length - 1);
+          sendSoc({
+            type: "SEND_AUDIO",
+            media: state.context.audio[index],
+            user: session?.user?.email,
+            final: final,
+          });
+        }
+        localStorage.setItem("idx", index.toString());
+        console.log("in delayed");
+      } else {
+        const payload: TranscriptRecord = {
+          email: session?.user?.email,
+          transcript: socketSt.context.transcript,
+          title: title.trim().length === 0 ? undefined: title.trim(),
+          duration: state.context.duration.toString(),
+          client_audio_id: localStorage.getItem("audioId") as string
+        }
+        sendSoc({ type: "SEND_TRANSCRIPT", payload: payload });
+        setTimeout(() => send({ type: "KEEP_TRANSCRIPT", payload: payload }), 1500);
+        setLoading(false);
+        console.log("in immedaite");
+      }
+    }
+  }, [state.value, state.context.audioURL]);
+
+  useEffect(() => {
+    const index: number = parseInt(localStorage.getItem("idx") as string);
+    console.log("at notification");
+    if (localStorage.getItem("idx") && index >= state.context.audio.length) {
+      console.log("passed notification");
       const payload: TranscriptRecord = {
         email: session?.user?.email,
         transcript: socketSt.context.transcript,
@@ -125,8 +161,9 @@ const page = () => {
       }
       sendSoc({ type: "SEND_TRANSCRIPT", payload: payload });
       send({ type: "KEEP_TRANSCRIPT", payload: payload });
+      setLoading(false);
     }
-  }, [state.value, state.context.audioURL]);
+  }, [socketSt.context.notify])
 
   const handleRecording = (type: Records) => {
     if (type === "start") {

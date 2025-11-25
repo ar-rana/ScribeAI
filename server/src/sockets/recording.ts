@@ -6,6 +6,7 @@ const ZAudioData = z.object({
   audio: z.string(),
   client_id: z.string(),
   user: z.string(),
+  final: z.string().optional()
 });
 
 class SocketService {
@@ -68,7 +69,8 @@ class SocketService {
           transcript: response.text(),
           client_id: audioData.client_id,
           user: audioData.user
-        }
+        } as any;
+        if (audioData.final) data.final = true;
         console.log("gemini data: ", data);
         socket.emit("transciption", { message: data });
       });

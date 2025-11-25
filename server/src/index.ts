@@ -47,7 +47,7 @@ app.get("/dashboard", (req, res) => {
   res.redirect("http://localhost:3000/dashboard");
 });
 
-app.post("/user/recording", async (req, res) => { // used
+app.post("/user/recording", authMiddleware, async (req, res) => { // used
   try {
     const zdata = recording.parse(req.body);
     console.log("record data: ", zdata);
@@ -67,7 +67,7 @@ app.post("/user/recording", async (req, res) => { // used
   }
 });
 
-app.post("/transcript", async (req, res) => {
+app.post("/transcript", authMiddleware, async (req, res) => {
   try {
     const zdata = transcriptPayload.parse(req.body);
     const transcript = await prismaClient.transcripts.findFirst({
