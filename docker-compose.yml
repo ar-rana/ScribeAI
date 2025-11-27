@@ -14,6 +14,13 @@ services:
       - pg_data:/var/lib/postgresql/data
     restart: always
 
+  rb_queue:
+    container_name: rabbit_mq
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
 volumes:
   pg_data: 
 

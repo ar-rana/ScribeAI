@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import z from "zod";
 import { geminiModel } from "../services/geminiAI.js";
+import ampq from "amqplib";
 
 const ZAudioData = z.object({
   audio: z.string(),
@@ -9,8 +10,13 @@ const ZAudioData = z.object({
   final: z.string().optional()
 });
 
+const rabbitURL = process.env.RABBIT_MQ_URL || "amqp://localhost:5672";
+const Q = "audio-chunk";
+
 class SocketService {
   private _io: Server;
+  private mq: any;
+  private channel: any;
 
   constructor() {
     console.log("Init Socket Server");
@@ -42,10 +48,17 @@ class SocketService {
         };
         console.log("Audio from client: ", audioData.client_id + " " + audioData.user + " " + audioData.audio.slice(0, 21));
 
-        socket.emit("audio_received", { message: "received message" });
         if (audioData.audio.startsWith("data:")) {
           audioData.audio = audioData.audio.split(",")[1] as string;
         }
+        this.sendToMQ(audioData);
+        socket.emit("audio_received", { message: "received message" });
+      });
+
+      this.channel?.consume(Q, async (msg: any) => {
+        const content = msg.content.toString();
+        // console.log(`Received: ${content.slice(0, 50)} ..................  ${content.slice(content.length - 100, content.length)}`);
+        const audioData = ZAudioData.parse(JSON.parse(content));
 
         const promptConfig = [
           {
@@ -65,6 +78,7 @@ class SocketService {
 
         const response = await result.response;
         console.log("transcript response: ", response.text());
+
         const data = {
           transcript: response.text(),
           client_id: audioData.client_id,
@@ -73,8 +87,27 @@ class SocketService {
         if (audioData.final) data.final = true;
         console.log("gemini data: ", data);
         socket.emit("transciption", { message: data });
-      });
+
+        this.channel.ack(msg);
+      }, { noAck: false });
     });
+  }
+
+  public async connectToMQ() {
+    try {
+      this.mq = await ampq.connect(rabbitURL);
+      this.channel = await this.mq.createChannel();
+      await this.channel.assertQueue(Q, { durable: true });
+      console.log("RabbitMQ connected");
+    } catch (e) {
+      console.log("error: ", e);
+    }
+  }
+
+  public async sendToMQ(payload: any) {
+    console.log("payload: ", payload);
+    this.channel.sendToQueue(Q, Buffer.from(JSON.stringify(payload)));
+    console.log("sent: ", JSON.stringify(payload));
   }
 
   get io() {
