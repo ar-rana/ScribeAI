@@ -130,6 +130,7 @@ async function init() {
     console.log(`Server is listening on port ${port}`);
   });
 
+  socketService.connectToMQ();
   socketService.initListner();
 }
 

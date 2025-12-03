@@ -89,5 +89,6 @@ We need to ensure that system persists and sends data in the right order even if
 ---
 
 ## Stream Pipeline Flow Diagram
-<img width="1184" height="587" alt="image" src="https://github.com/user-attachments/assets/21b8de91-d742-4815-85ed-5f13c7115055" />
+<img width="1370" height="637" alt="image" src="https://github.com/user-attachments/assets/58f2c5d6-c751-4611-8d5d-d1bd49673341" />
+
 
